@@ -1,10 +1,3 @@
-"""Smoke tests for the legitimate docvault flow.
-
-These walk the normal member path so a reader can see how the api is meant to be
-used. They assert only the happy path and stay green on the starter code.
-"""
-
-
 def test_me(client, auth_alice):
     r = client.get("/me", headers=auth_alice)
     assert r.status_code == 200
@@ -24,7 +17,6 @@ def test_get_own_document(client, auth_alice):
     assert r.status_code == 200
     body = r.json()
     assert body["used_bytes"] == 200
-    # a member of the owning workspace sees the private blocks
     assert body["sharing"]["share_token"] == "SHTOKEN-ALPHA-7731"
     assert body["storage"]["storage_key"] == "SK-ALPHA-3391"
 

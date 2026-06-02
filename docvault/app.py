@@ -1,23 +1,3 @@
-"""docvault - a small document workspace service.
-
-Members belong to a workspace and work with documents owned by that workspace.
-They read documents, upload revisions (which consume the document's byte quota),
-and soft-delete or restore documents.
-
-A document record carries private blocks: sharing (share_token, owner_email) and
-storage (storage_key, region). That data belongs to the owning workspace and must
-not be readable by a member of a different workspace.
-
-Endpoints
-  GET    /me
-  GET    /documents
-  GET    /documents/{doc_id}
-  POST   /documents/{doc_id}/revisions       body: {size_bytes}
-  GET    /documents/{doc_id}/revisions
-  DELETE /documents/{doc_id}
-  POST   /documents/{doc_id}/restore
-"""
-
 from __future__ import annotations
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -67,10 +47,6 @@ def get_document(doc_id: str, user: store.User = Depends(current_user)):
     doc = store.documents.get(doc_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="document not found")
-    # BUG: there is no workspace membership check, so a member of another
-    # workspace receives the full record including the private sharing and
-    # storage blocks. The correct behavior rejects a cross-workspace read with
-    # 403 and never returns the owning workspace's private data.
     return doc_full(doc)
 
 
@@ -83,10 +59,6 @@ def add_revision(doc_id: str, body: RevisionBody, user: store.User = Depends(cur
         raise HTTPException(status_code=403, detail="not your workspace")
     if body.size_bytes <= 0:
         raise HTTPException(status_code=400, detail="size_bytes must be positive")
-    # BUG: there is no check that used_bytes + size_bytes stays within
-    # quota_bytes, so an upload can push a document over its byte quota. The
-    # correct behavior rejects an over-quota revision with 409 and leaves
-    # used_bytes unchanged.
     doc.used_bytes += body.size_bytes
     rev = store.Revision(store.next_revision_id(), doc_id, user.id, body.size_bytes)
     store.revisions[rev.id] = rev
